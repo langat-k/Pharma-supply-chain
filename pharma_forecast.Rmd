@@ -1,0 +1,96 @@
+---
+title: "Pharmaceutical Sales Forecasting"
+author: "Langat Ebenezer"
+date: "2025-03-08"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Introduction
+
+To address the challenging dynamics of pharmaceutical sales, I employed forecasting techniques on a comprehensive dataset. This dataset comprises six years of transaction records (2014-2019) for 57 specific drugs, enabling us to extract meaningful insights and generate reliable sales forecasts
+
+## Necessary libraries
+```{r}
+pacman::p_load(tidyverse, rio, lubridate, naniar,tsibble, forecast,timetk)
+```
+
+## Data preprocessing
+```{r}
+# import the dataset
+drug_sales <- import("salesdaily.csv")
+```
+
+
+```{r}
+# check for missingness in the dataset
+skimr::skim(drug_sales)
+```
+
+
+```{r}
+# Applying appropriate date format
+drug_sales$date <- as.Date(drug_sales$datum, format = "%m/%d/%Y")
+```
+
+
+```{r}
+## Cleaning the dataset
+drug_sale_clean <- drug_sales %>%
+  # select required variables
+  select(c(1:9, date)) %>% 
+  # change to long format
+  pivot_longer(cols = 2:9, names_to = "drug", values_to = "cost") %>% 
+  # select drug class of interest
+  filter(drug == "M01AB") %>% 
+  select(-c(datum,drug,date))
+
+```
+
+
+```{r}
+# create a time series
+monthly_ts <- ts(drug_sale_clean,start = c(2014), end = c(2019), frequency = 12)
+  
+```
+
+# Time Series analysis
+```{r}
+plot(monthly_ts, col = "blue")
+```
+
+Observed sales trends indicate a cyclical pattern, potentially driven by seasonal influences and external market variations. To ensure the robustness of our sales predictions for class M01AB drugs, hypothesis testing will be employed, verifying that identified patterns are statistically significant and not due to random fluctuations. 
+Furthermore, autocorrelation analysis will be used to quantify the relationship between drug costs and their values across different time lags, revealing any temporal dependencies within the data.
+
+```{r}
+acf(monthly_ts)
+pacf(monthly_ts)
+```
+
+Decompose the data into random,trend,seasonal and deserved data
+
+```{r}
+m01ab_ddata <- decompose(monthly_ts, "multiplicative")
+plot(m01ab_ddata)
+```
+
+Exploring the arima model
+```{r}
+ar_model <- auto.arima(monthly_ts, ic = "aic", trace = TRUE)
+ar_model
+```
+
+## Forecasting for the next 5 years 
+
+```{r, eval=FALSE}
+fc_model <- forecast(ar_model,level = C(95), h = 5*12 )
+```
+
+
+
+
+
+
+
